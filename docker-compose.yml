@@ -1,0 +1,55 @@
+version: "3.8"
+
+services:
+  # PostgreSQL database
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_PASSWORD: my_password  # Change this to a strong password
+      POSTGRES_USER: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Airflow scheduler and webserver
+  airflow:
+    image: apache/airflow:latest
+    environment:
+      AIRFLOW__CORE__LOAD_EXAMPLES: True  # Set to False for production
+      AIRFLOW__API__AUTH_BACKEND: airflow  # Set up authentication for production
+      POSTGRES_HOST: postgres
+      POSTGRES_PASSWORD: my_password
+      POSTGRES_USER: postgres
+    volumes:
+      - airflow_dags:/opt/airflow/dags
+      - airflow_logs:/opt/airflow/logs
+
+  # dbt container (standalone mode)
+  dbt:
+    image: dbtlabs/dbt:latest
+    depends_on:
+      - postgres
+    environment:
+      DBT_SERVER_HOST: postgres
+      DBT_SERVER_PORT: 5432
+      DBT_USER: postgres
+      DBT_PASSWORD: my_password
+      DBT_PROJECT_DIR: /opt/dbt/projects  # Mount your dbt project directory here
+
+  # Redash container
+  redash:
+    image: redash/redash:latest
+    depends_on:
+      - postgres
+    environment:
+      REDASH_POSTGRES_HOST: postgres
+      REDASH_POSTGRES_USER: postgres
+      REDASH_POSTGRES_PASSWORD: my_password
+      REDASH_POSTGRES_DB: redash  # You can create this database manually in postgres
+    volumes:
+      - redash_data:/var/lib/redash
+
+volumes:
+  postgres_data: {}
+  airflow_dags: {}
+  airflow_logs: {}
+  redash_data: {}
